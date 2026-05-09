@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Virgínea IA</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="chat-app">
+    <div class="chat-header">
+        <div class="logo-area">
+            <img id="sspLogo" class="logo-img" src="ssp.png" alt="SSP Logo" 
+                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'48\' fill=\'%2300bfff\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ctext x=\'50\' y=\'67\' font-size=\'42\' font-family=\'Arial, sans-serif\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3ESS%3C/text%3E%3C/svg%3E';">
+        </div>
+        <div class="header-text">
+            <h1>Virgínia</h1>
+        </div>
+        <button id="fullscreenBtn" class="theme-button">⛶ Tela cheia</button>
+        <button id="themeBtn" class="theme-button" onclick="mudarTema()">🎨 Tema</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-input-area">
+        <input type="text" id="messageInput" placeholder="Pergunta alguma coisa..." autocomplete="off" aria-label="Mensagem">
+        <button id="sendBtn">📨 Enviar</button>
+    </div>
+
+    <div class="chat-footer">
+        ✦ desenvolvido por <strong>Gediel Nestor</strong> ✦
+    </div>
+</div>
+
+<script>
+       let conversationHistory = []; // armazena até 6 últimas interações { role: "user" ou "assistant", content }
+    const MAX_HISTORY = 8;
+    // Elementos DOM
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendBtn');
+
+    let waitingForAI = false;
+    let typingTimeout = null;
+
+    // Mostrar indicador de "digitando" (simula processamento da IA)
+    function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('message', 'ai');
+        typingDiv.id = 'typingIndicator';
+        const metaSpan = document.createElement('div');
+        metaSpan.classList.add('message-meta');
+        metaSpan.textContent = 'Virgínia IA';
+        const bubbleWrapper = document.createElement('div');
+        bubbleWrapper.classList.add('typing-indicator');
+        bubbleWrapper.innerHTML = '<span></span><span></span><span></span>';
+        typingDiv.appendChild(metaSpan);
+        typingDiv.appendChild(bubbleWrapper);
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    function scrollToBottom() {
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+
+    // Adiciona mensagem na tela e no histórico
+    function addMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+        const metaSpan = document.createElement('div');
+        metaSpan.classList.add('message-meta');
+        metaSpan.textContent = sender === 'user' ? 'você' : 'SSP IA';
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.classList.add('bubble');
+        bubbleDiv.textContent = text;
+        messageDiv.appendChild(metaSpan);
+        messageDiv.appendChild(bubbleDiv);
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+
+        // Atualiza histórico (mantém IA contextual)
+        conversationHistory.push({ role: sender === 'user' ? 'user' : 'assistant', content: text });
+        if (conversationHistory.length > MAX_HISTORY * 2) {
+            conversationHistory.shift();
+        }
+    }
+
+    // --------------------- Função de raciocínio inteligente (DeepSeek leve) ---------------------
+    // Analisa intenção, contexto recente e gera respostas mais naturais e coerentes.
+    function getIntelligentResponse(userMessage, history) {
+        const msg = userMessage.trim().toLowerCase();
+        // Extrai contexto das últimas mensagens para refinar respostas
+        const lastUserMsg = history.filter(h => h.role === 'user').slice(-1)[0]?.content.toLowerCase() || '';
+        const lastAiMsg = history.filter(h => h.role === 'assistant').slice(-1)[0]?.content.toLowerCase() || '';
+
+        // 1. Identificar perguntas sobre o criador (obrigatório)
+        if (msg.includes('criador') || msg.includes('criado por') || msg.includes('gediel') || 
+            msg.includes('nestor') || (msg.includes('quem') && msg.includes('criou')) ||(msg.includes('quem') && msg.includes('programou')) ||
+            (msg.includes('desenvolveu') && msg.includes('você')) || msg.includes('seu criador') ||
+            (msg.includes('quem te criou')) || (msg.includes('fez você'))) {
+            return "Excelente pergunta! Fui criada por Gediel Nestor, aluno do curso técnico de informática no instituto politécnico privado sassapa";
+        }
+        // ---- RESOLUÇÃO DE EQUAÇÕES MATEMÁTICAS (BHASKARA) ----
+const equacaoMatch = msg.match(/(\d*\.?\d*)?x\^?2\s*([+-]\s*\d*\.?\d*)?x?\s*([+-]\s*\d*\.?\d*)?\s*=\s*0/i);
+if (equacaoMatch || msg.includes('equação') || msg.includes('resolver') || msg.includes('calcular')) {
+    // Tenta extrair coeficientes de uma equação do tipo: ax^2 + bx + c = 0
+    let a = 0, b = 0, c = 0;
+    
+    // Padrão mais robusto: captura a, b, c
+    const regex = /(\d*\.?\d*)?x\^?2\s*([+-]\s*\d*\.?\d*)?x?\s*([+-]\s*\d*\.?\d*)?\s*=\s*0/i;
+    const match = msg.replace(/x²/g, 'x^2').match(regex);
+    
+    if (match) {
+        a = parseFloat(match[1]) || (match[1] === '-' ? -1 : 1);
+        b = parseFloat(match[2]?.replace(/\s/g, '')) || 0;
+        c = parseFloat(match[3]?.replace(/\s/g, '')) || 0;
+    } else if (msg.includes('equação') || msg.includes('resolver')) {
+        // Caso o usuário escreva "resolva x^2 - 5x + 6 = 0" mas não encaixou no regex
+        const manual = msg.match(/[+-]?\d*\.?\d*x\^2\s*([+-]\s*\d*\.?\d*x)?\s*([+-]\s*\d*\.?\d*)?\s*=\s*0/i);
+        if (!manual) return "Digite a equação no formato: ax² + bx + c = 0. Exemplo: 2x² - 4x - 6 = 0";
+    }
+    
+    // Se a = 0, não é uma equação do 2º grau
+    if (a === 0 && msg.match(/x\^?2/i)) return "Isso não parece uma equação do segundo grau (a não pode ser zero).";
+    
+    // Calcula o discriminante
+    const delta = (b * b) - (4 * a * c);
+    
+    if (a !== 0) {
+        if (delta < 0) {
+            return `Δ = ${delta} < 0, portanto não há raízes reais. As raízes são complexas: x = ${(-b)}/(2*${a}) ± i√${Math.abs(delta)}/${2*a}.`;
+        } else if (delta === 0) {
+            const x = -b / (2 * a);
+            return `Δ = 0 → raiz dupla: x = ${x}.`;
+        } else {
+            const x1 = (-b + Math.sqrt(delta)) / (2 * a);
+            const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+            return `Equação: ${a}x² + ${b}x + ${c} = 0\nΔ = ${delta}\nx₁ = ${x1}\nx₂ = ${x2}`;
+        }
+    }
+}
+        
+        // 2. Identidade e nome
+        if (msg.includes('teu nome') || msg.includes('quem és') || msg.includes('quem és tu') || 
+            (msg.includes('qual é') && msg.includes('teu nome')) || msg.includes('chamas')) {
+            return "Olá! Eu sou a Virgínia.";
+        }
+        
+  
+
+        // 3. Saudações com variação contextual
+        if (msg.match(/\b(oi|olá|opa|e aí|oie|hello|tudo bem|hey|hi)\b/i)) {
+            if (lastAiMsg && (lastAiMsg.includes("Olá") || lastAiMsg.includes("Oi"))) {
+                return "Olá! Como posso te ajudar?";
+            }
+            return "Olá! Tudo bem? Sou a Virgínia IA.";
+        }
+
+        // 4. Agradecimentos
+        if (msg.includes('obrigado') || msg.includes('valeu') || msg.includes('agradecido') || msg.includes('grato') || msg.includes('thanks')) {
+            return "De nada! Fico feliz em ajudar. Fui programado para ser prestativo.";
+        }
+        
+        if (msg.includes('elon musk') && msg.includes('quem')|| msg.includes('elon') && msg.includes('fale') || msg.includes('sobre elon') || msg.includes('acerca de elon')||msg.includes('elon')){
+             return "Elon Musk (nascido em 1971, África do Sul) é um empreendedor visionário, CEO da Tesla e fundador da SpaceX, focado em inteligência artificial (xAI, Neuralink) e energia sustentável. Conhecido por revolucionar carros elétricos e exploração espacial, tornou-se um dos homens mais ricos do mundo, acumulando fortunas com a venda do PayPal.";
+         }
+        // 5. Estado / humor
+        if (msg.includes('como estás') || msg.includes('tudo bem com você') || msg.includes('tudo bem')) {
+            return "Tudo tranquilo, do que precisas?";
+        }
+
+        // 6. Ajuda / funcionalidades
+        if (msg.includes('ajuda') || msg.includes('o que você pode fazer') || msg.includes('sabes') || msg.includes('funcionalidades')) {
+            return "Posso responder sobre diversas questões, manda vir.";
+        }
+
+        // 7. Despedida
+        if (msg.includes('tchau') || msg.includes('até logo') || msg.includes('é tudo') || msg.includes('sim') || msg.includes('adeus')) {
+            return "baza já";
+        }
+
+        // 8. Perguntas sobre habilidades / conhecimento
+        if (msg.includes('o que você sabe') || msg.includes('como você funciona') || msg.includes('o que consegues fazer')) {
+            return "Tenho conhecimento geral, mas minha especialidade é conversar de forma contextual.";
+        }
+
+        // 9. Pergunta sobre deepseek ou modelo
+        if (msg.includes('criado') || msg.includes('programado') || msg.includes('como você funciona') || msg.includes('trabalha') ||  msg.includes('desenvolvido')) {
+            return "Eu fui criada pelo Gediel com javascript simples utilizando um sistema de buscas por palavra chave no que você digita. ";
+        }
+
+        // 10. Respostas contextuais que usam histórico (ex: usuário repete pergunta ou faz follow-up)
+ 
+
+        // 11. Perguntas sobre tecnologia / dicas / curiosidades (respostas interessantes)
+        if (msg.includes('dica') || msg.includes('sugestão') || msg.includes('recomenda')) {
+            return "Que tal explorar mais sobre JavaScript ou CSS?";
+        }
+
+        if (msg.includes('obrigado') || msg.includes('valeu')) {
+        return "Fico feliz em ajudar";
+        }
+        // 12. Se o usuário mencionar "memória" ou "você lembra"
+        if (msg.includes('lembra') || msg.includes('memória') || msg.includes('conversamos')) {
+            const lastFew = history.slice(-2).map(h => `${h.role === 'user' ? 'Você' : 'Eu'}: ${h.content.substring(0, 40)}`).join(' | ');
+            if (lastFew) {
+                return `Claro que lembro! 😊 Conversamos recentemente sobre: ${lastFew}.`;
+            } else {
+                return "Sim, tenho memória recente das últimas trocas. Se quiser, posso revisitar algum assunto. Ah, e meu criador é Gediel Nestor!";
+            }
+        }
+// Cálculos básicos
+if (msg.match(/[\d\s\+\-\*\/\(\)]+/) && !msg.match(/[a-z]/i)) {
+    try {
+        const resultado = eval(msg);
+        if (typeof resultado === 'number' && !isNaN(resultado)) {
+            return `O resultado é: ${resultado}`;
+        }
+    } catch(e) {}
+}
+        // 13. Percepção de sentimento: se a mensagem for muito curta ou genérica, responder de forma envolvente
+        if (msg.length <= 9 && !msg.includes('?')) {
+            return "Não entendi, pergunta outra coisa.";
+        }
+
+        // 14. Fallback inteligente e personalizado (sempre lembrando do criador com naturalidade)
+        return `Lamento, não sei nada sobre ${userMessage.substring(0, 60)}.`;
+    }
+
+    // Função principal que processa a mensagem do usuário com contexto e delay natural
+    async function sendUserMessage() {
+        const rawMessage = messageInput.value.trim();
+        if (rawMessage === '' || waitingForAI) return;
+        
+        // Adiciona mensagem do usuário na tela e no histórico
+        addMessage('user', rawMessage);
+        messageInput.value = '';
+        
+        waitingForAI = true;
+        sendButton.disabled = true;
+        messageInput.disabled = true;
+        
+        // Mostra indicador de "pensando" (similar a DeepSeek)
+        showTypingIndicator();
+        
+        // Gera resposta com base no histórico + mensagem atual
+        // Cria um "contexto" do histórico para enviar à função inteligente (últimas 4 interações)
+        const recentHistory = conversationHistory.slice(-MAX_HISTORY);
+        const aiReply = getIntelligentResponse(rawMessage, recentHistory);
+        
+        // Pequeno delay para simular processamento, mas mantém leveza
+        setTimeout(() => {
+            removeTypingIndicator();
+            addMessage('ai', aiReply);
+            waitingForAI = false;
+            sendButton.disabled = false;
+            messageInput.disabled = false;
+            messageInput.focus();
+            scrollToBottom();
+        }, 420); // tempo suave, não pesado
+    }
+    
+    // Handler para botão e enter
+    function handleSendClick() { sendUserMessage(); }
+    function handleKeyPress(event) { if (event.key === 'Enter' && !waitingForAI) { event.preventDefault(); sendUserMessage(); } }
+    
+    sendButton.addEventListener('click', handleSendClick);
+    messageInput.addEventListener('keypress', handleKeyPress);
+    
+    // Mensagem de boas-vindas personalizada (usa contexto inicial)
+    function initWelcome() {
+        if (messagesContainer.children.length === 0) {
+            const welcomeText = "Oi, Eu sou a Virgínia, pergunta-me alguma coisa 💬";
+            addMessage('ai', welcomeText);
+        }
+    }
+    
+    initWelcome();
+    window.addEventListener('load', () => messageInput.focus());
+    
+    // Observer para rolagem automática
+    const observer = new MutationObserver(() => scrollToBottom());
+    observer.observe(messagesContainer, { childList: true, subtree: false });
+    
+    // Atalho mobile: evitar submit duplicado
+    console.log('Virgínia IA com raciocínio ativo | Criador: Gediel Nestor');
+    // Função para trocar entre 5 temas
+let temaAtual = 0;
+const temas = ['tema-azul', 'tema-roxo', 'tema-verde', 'tema-laranja', 'tema-rosa'];
+
+function mudarTema() {
+    // Remove a classe de tema atual do body
+    document.body.classList.remove(temas[temaAtual]);
+    // Avança para o próximo tema
+    temaAtual = (temaAtual + 1) % temas.length;
+    // Adiciona a nova classe
+    document.body.classList.add(temas[temaAtual]);
+}
+
+// Inicializa com o tema azul (garante que a classe esteja no body)
+document.body.classList.add('tema-azul');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Erro ao entrar em tela cheia: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
+}
+</script>
+</body>
+</html>
